@@ -3,8 +3,12 @@
 // pits: gaps in the ground (falling in = lose a life). platforms: floating solid rectangles.
 // enemies: patrol back and forth between patrolMin/patrolMax at their spawn y.
 
-const GROUND_Y = 600;
-const GROUND_H = 40;
+// Ground sits well above the canvas bottom so the on-screen touch controls
+// (which overlay the bottom of the screen) never cover the playable area.
+// The ground block itself extends all the way down to the canvas edge so
+// it still reads as solid earth rather than a floating strip.
+const GROUND_Y = 460;
+const GROUND_H = 180;
 
 const LEVELS = [
   {
