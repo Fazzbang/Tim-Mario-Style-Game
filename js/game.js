@@ -16,7 +16,7 @@
   }
   loadImage("player", "assets/player.png");
   loadImage("enemy", "assets/enemy.svg");
-  loadImage("background", "assets/background.svg");
+  loadImage("background", "assets/background.jpg");
   loadImage("flag", "assets/flag.svg");
 
   // ---------- Physics constants ----------
@@ -267,26 +267,27 @@
   function drawBackground() {
     const bg = images.background;
     if (!bg.complete || bg.naturalWidth === 0) {
-      ctx.fillStyle = "#8fd6ff";
+      ctx.fillStyle = "#0c0f1f";
       ctx.fillRect(0, 0, CW, CH);
       return;
     }
+    // This background is one composed scene (not a repeating texture), so instead of
+    // tiling it we pan its full width across the full level - the camera's 0..1 progress
+    // through the level maps to the image's 0..1 pan range, arriving at the castle by the goal.
     const bgW = bg.naturalWidth * (CH / bg.naturalHeight);
-    const offset = -((camX * 0.35) % bgW);
-    let x = offset;
-    while (x < CW) {
-      ctx.drawImage(bg, x, 0, bgW, CH);
-      x += bgW;
-    }
+    const maxCamX = Math.max(1, level.width - CW);
+    const maxBgPan = Math.max(0, bgW - CW);
+    const offset = -((camX / maxCamX) * maxBgPan);
+    ctx.drawImage(bg, offset, 0, bgW, CH);
   }
 
   function drawGround() {
     for (const s of groundSegments()) {
       const sx = s.x - camX;
       if (sx + s.w < 0 || sx > CW) continue;
-      ctx.fillStyle = "#6d4c2b";
+      ctx.fillStyle = "#3a3a42";
       ctx.fillRect(sx, s.y, s.w, s.h);
-      ctx.fillStyle = "#5fb562";
+      ctx.fillStyle = "#4d5a45";
       ctx.fillRect(sx, s.y, s.w, 8);
     }
   }
@@ -295,9 +296,9 @@
     for (const p of level.platforms) {
       const sx = p.x - camX;
       if (sx + p.w < 0 || sx > CW) continue;
-      ctx.fillStyle = "#8b5a2b";
+      ctx.fillStyle = "#4a4438";
       ctx.fillRect(sx, p.y, p.w, p.h);
-      ctx.fillStyle = "#5fb562";
+      ctx.fillStyle = "#4d5a45";
       ctx.fillRect(sx, p.y, p.w, 6);
     }
   }

@@ -8,7 +8,7 @@ const GROUND_H = 40;
 
 const LEVELS = [
   {
-    name: "Level 1 - Green Hills",
+    name: "Level 1 - Moonlit Woods",
     width: 2400,
     groundY: GROUND_Y,
     groundH: GROUND_H,
@@ -37,7 +37,7 @@ const LEVELS = [
     goalX: 2320,
   },
   {
-    name: "Level 2 - Rocky Ridge",
+    name: "Level 2 - Castle Approach",
     width: 3000,
     groundY: GROUND_Y,
     groundH: GROUND_H,
