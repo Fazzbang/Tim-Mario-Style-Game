@@ -14,7 +14,7 @@
     images[key] = img;
     return img;
   }
-  loadImage("player", "assets/player.svg");
+  loadImage("player", "assets/player.png");
   loadImage("enemy", "assets/enemy.svg");
   loadImage("background", "assets/background.svg");
   loadImage("flag", "assets/flag.svg");
@@ -27,7 +27,8 @@
   const STOMP_BOUNCE = -9;
   const ENEMY_SPEED = 1.0;
 
-  const PLAYER_W = 26;
+  // Player sprite is a single static image (not a spritesheet), matched to its ~2:3 aspect ratio.
+  const PLAYER_W = 28;
   const PLAYER_H = 42;
   const ENEMY_W = 26;
   const ENEMY_H = 26;
@@ -53,7 +54,7 @@
     return {
       x: start.x, y: start.y, w: PLAYER_W, h: PLAYER_H,
       vx: 0, vy: 0, onGround: false, facing: 1,
-      animFrame: 0, animTimer: 0, alive: true,
+      animTimer: 0, alive: true,
     };
   }
 
@@ -189,17 +190,9 @@
       }
     }
 
-    // animation
-    if (!player.onGround) {
-      player.animFrame = 3; // jump frame
-    } else if (player.vx !== 0) {
-      player.animTimer++;
-      if (player.animTimer > 8) {
-        player.animTimer = 0;
-        player.animFrame = player.animFrame === 1 ? 2 : 1;
-      }
-    } else {
-      player.animFrame = 0;
+    // walk bob: single static sprite, so animate a small bounce instead of frame-swapping
+    if (player.onGround && player.vx !== 0) {
+      player.animTimer += 0.35;
     }
 
     // fell in a pit / off the world
@@ -343,14 +336,15 @@
   function drawPlayer() {
     const spr = images.player;
     const sx = player.x - camX;
+    const bob = player.onGround && player.vx !== 0 ? Math.abs(Math.sin(player.animTimer)) * 3 : 0;
     ctx.save();
     if (spr.complete && spr.naturalWidth > 0) {
       if (player.facing === -1) {
-        ctx.translate(sx + player.w, player.y);
+        ctx.translate(sx + player.w, player.y - bob);
         ctx.scale(-1, 1);
-        ctx.drawImage(spr, player.animFrame * 32, 0, 32, 48, 0, 0, player.w, player.h);
+        ctx.drawImage(spr, 0, 0, player.w, player.h);
       } else {
-        ctx.drawImage(spr, player.animFrame * 32, 0, 32, 48, sx, player.y, player.w, player.h);
+        ctx.drawImage(spr, sx, player.y - bob, player.w, player.h);
       }
     } else {
       ctx.fillStyle = "#d32f2f";
