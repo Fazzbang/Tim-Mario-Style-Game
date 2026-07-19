@@ -15,7 +15,7 @@
     return img;
   }
   loadImage("player", "assets/player.png");
-  loadImage("enemy", "assets/enemy.svg");
+  loadImage("enemy", "assets/enemy.png");
   loadImage("background", "assets/background.jpg");
   loadImage("flag", "assets/flag.svg");
 
@@ -30,8 +30,9 @@
   // Player sprite is a single static image (not a spritesheet), matched to its ~2:3 aspect ratio.
   const PLAYER_W = 28;
   const PLAYER_H = 42;
-  const ENEMY_W = 26;
-  const ENEMY_H = 26;
+  // Enemy sprite is also a single static image, matched to its ~1.09:1 aspect ratio.
+  const ENEMY_W = 32;
+  const ENEMY_H = 29;
 
   // ---------- Game state ----------
   const STATE = { START: "start", PLAYING: "playing", LEVEL_COMPLETE: "level_complete", GAME_OVER: "game_over", WIN: "win" };
@@ -64,7 +65,7 @@
     enemies = level.enemies.map((e) => ({
       x: e.x, y: e.y, w: ENEMY_W, h: ENEMY_H,
       vx: -ENEMY_SPEED, min: e.min, max: e.max, alive: true,
-      animFrame: 0, animTimer: 0,
+      animTimer: 0,
       dying: false, vy: 0, rotation: 0, rotSpeed: 0,
     }));
     document.getElementById("hud-level").textContent = level.name;
@@ -222,12 +223,7 @@
       en.x += en.vx;
       if (en.x <= en.min) { en.x = en.min; en.vx = ENEMY_SPEED; }
       if (en.x + en.w >= en.max) { en.x = en.max - en.w; en.vx = -ENEMY_SPEED; }
-
-      en.animTimer++;
-      if (en.animTimer > 14) {
-        en.animTimer = 0;
-        en.animFrame = en.animFrame === 0 ? 1 : 0;
-      }
+      en.animTimer += 0.25;
 
       // Enemies only affect the player on actual contact (AABB overlap) - never at a distance.
       if (player.alive && aabb(player, en)) {
@@ -330,24 +326,38 @@
       const sx = en.x - camX;
       if (sx + en.w < 0 || sx > CW) continue;
       const hasSprite = spr.complete && spr.naturalWidth > 0;
+
       if (en.dying) {
         // Tumble off the map: rotate around the enemy's own center as it falls.
         ctx.save();
         ctx.translate(sx + en.w / 2, en.y + en.h / 2);
         ctx.rotate(en.rotation);
         if (hasSprite) {
-          ctx.drawImage(spr, 0, 0, 28, 28, -en.w / 2, -en.h / 2, en.w, en.h);
+          ctx.drawImage(spr, -en.w / 2, -en.h / 2, en.w, en.h);
         } else {
           ctx.fillStyle = "#8b5a2b";
           ctx.fillRect(-en.w / 2, -en.h / 2, en.w, en.h);
         }
         ctx.restore();
-      } else if (hasSprite) {
-        ctx.drawImage(spr, en.animFrame * 28, 0, 28, 28, sx, en.y, en.w, en.h);
-      } else {
-        ctx.fillStyle = "#8b5a2b";
-        ctx.fillRect(sx, en.y, en.w, en.h);
+        continue;
       }
+
+      const bob = Math.abs(Math.sin(en.animTimer)) * 2;
+      const facingLeft = en.vx < 0;
+      if (!hasSprite) {
+        ctx.fillStyle = "#8b5a2b";
+        ctx.fillRect(sx, en.y - bob, en.w, en.h);
+        continue;
+      }
+      ctx.save();
+      if (facingLeft) {
+        ctx.translate(sx + en.w, en.y - bob);
+        ctx.scale(-1, 1);
+        ctx.drawImage(spr, 0, 0, en.w, en.h);
+      } else {
+        ctx.drawImage(spr, sx, en.y - bob, en.w, en.h);
+      }
+      ctx.restore();
     }
   }
 
