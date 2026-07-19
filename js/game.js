@@ -18,6 +18,13 @@
   loadImage("enemy", "assets/enemy.png");
   loadImage("background", "assets/background.jpg");
   loadImage("flag", "assets/flag.svg");
+  loadImage("platformTile", "assets/platform-tile.png");
+
+  // The platform tile art has a glowing top edge (the walkable surface) around 6.4% down
+  // from its top, a solid rectangular stone body down to about 71.8%, and ragged moss
+  // dangling past that toward the bottom - used as a decorative overhang under platforms.
+  const TILE_GLOW_FRAC = 0.064;
+  const TILE_SOLID_BOTTOM_FRAC = 0.718;
 
   // ---------- Physics constants ----------
   const GRAVITY = 0.9;
@@ -287,24 +294,65 @@
   }
 
   function drawGround() {
+    const tile = images.platformTile;
+    const hasTile = tile.complete && tile.naturalWidth > 0;
     for (const s of groundSegments()) {
       const sx = s.x - camX;
       if (sx + s.w < 0 || sx > CW) continue;
-      ctx.fillStyle = "#3a3a42";
-      ctx.fillRect(sx, s.y, s.w, s.h);
-      ctx.fillStyle = "#4d5a45";
-      ctx.fillRect(sx, s.y, s.w, 8);
+      if (!hasTile) {
+        ctx.fillStyle = "#3a3a42";
+        ctx.fillRect(sx, s.y, s.w, s.h);
+        ctx.fillStyle = "#4d5a45";
+        ctx.fillRect(sx, s.y, s.w, 8);
+        continue;
+      }
+      // Ground uses just the solid rectangular block portion of the tile (no dangling
+      // moss fringe), scaled to exactly fill the ground strip's height, tiled across its width.
+      const iw = tile.naturalWidth, ih = tile.naturalHeight;
+      const srcY = ih * TILE_GLOW_FRAC;
+      const srcH = ih * (TILE_SOLID_BOTTOM_FRAC - TILE_GLOW_FRAC);
+      const scale = s.h / srcH;
+      const tileW = iw * scale;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(sx, s.y, s.w, s.h);
+      ctx.clip();
+      for (let x = sx; x < sx + s.w; x += tileW) {
+        ctx.drawImage(tile, 0, srcY, iw, srcH, x, s.y, tileW, s.h);
+      }
+      ctx.restore();
     }
   }
 
   function drawPlatforms() {
+    const tile = images.platformTile;
+    const hasTile = tile.complete && tile.naturalWidth > 0;
+    const TILE_W = 64;
     for (const p of level.platforms) {
       const sx = p.x - camX;
       if (sx + p.w < 0 || sx > CW) continue;
-      ctx.fillStyle = "#4a4438";
-      ctx.fillRect(sx, p.y, p.w, p.h);
-      ctx.fillStyle = "#4d5a45";
-      ctx.fillRect(sx, p.y, p.w, 6);
+      if (!hasTile) {
+        ctx.fillStyle = "#4a4438";
+        ctx.fillRect(sx, p.y, p.w, p.h);
+        ctx.fillStyle = "#4d5a45";
+        ctx.fillRect(sx, p.y, p.w, 6);
+        continue;
+      }
+      // Platforms show the full tile - glowing top edge lined up with the walkable
+      // surface (p.y), stone body through the hitbox, and mossy roots dangling
+      // decoratively below it into open air.
+      const iw = tile.naturalWidth, ih = tile.naturalHeight;
+      const scale = TILE_W / iw;
+      const tileH = ih * scale;
+      const drawY = p.y - ih * TILE_GLOW_FRAC * scale;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(sx, 0, p.w, CH);
+      ctx.clip();
+      for (let x = sx; x < sx + p.w; x += TILE_W) {
+        ctx.drawImage(tile, x, drawY, TILE_W, tileH);
+      }
+      ctx.restore();
     }
   }
 
