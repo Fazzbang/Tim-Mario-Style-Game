@@ -45,7 +45,6 @@
 
   let player = null;
   let enemies = [];
-  let squashes = []; // brief squash effect markers { x, y, timer }
 
   const keys = { left: false, right: false, jump: false };
   let jumpHeld = false; // prevents holding jump from re-triggering every frame
@@ -66,8 +65,8 @@
       x: e.x, y: e.y, w: ENEMY_W, h: ENEMY_H,
       vx: -ENEMY_SPEED, min: e.min, max: e.max, alive: true,
       animFrame: 0, animTimer: 0,
+      dying: false, vy: 0, rotation: 0, rotSpeed: 0,
     }));
-    squashes = [];
     document.getElementById("hud-level").textContent = level.name;
   }
 
@@ -210,6 +209,16 @@
   function updateEnemies() {
     for (const en of enemies) {
       if (!en.alive) continue;
+
+      if (en.dying) {
+        // Defeated enemies tumble off the map instead of just vanishing.
+        en.vy += GRAVITY;
+        en.y += en.vy;
+        en.rotation += en.rotSpeed;
+        if (en.y > CH + 150) en.alive = false;
+        continue;
+      }
+
       en.x += en.vx;
       if (en.x <= en.min) { en.x = en.min; en.vx = ENEMY_SPEED; }
       if (en.x + en.w >= en.max) { en.x = en.max - en.w; en.vx = -ENEMY_SPEED; }
@@ -220,13 +229,15 @@
         en.animFrame = en.animFrame === 0 ? 1 : 0;
       }
 
+      // Enemies only affect the player on actual contact (AABB overlap) - never at a distance.
       if (player.alive && aabb(player, en)) {
         const stomping = player.vy > 0 && player.prevBottom <= en.y + 8;
         if (stomping) {
-          en.alive = false;
+          en.dying = true;
+          en.vy = -6;
+          en.rotSpeed = (en.x < player.x ? -1 : 1) * 0.3;
           player.vy = STOMP_BOUNCE;
           score += 100;
-          squashes.push({ x: en.x, y: en.y + en.h - 8, timer: 18 });
           updateHud();
         } else {
           loseLife();
@@ -259,8 +270,6 @@
     updateEnemies();
     if (state !== STATE.PLAYING) return;
     updateCamera();
-    squashes.forEach((s) => s.timer--);
-    squashes = squashes.filter((s) => s.timer > 0);
   }
 
   // ---------- Render ----------
@@ -320,17 +329,25 @@
     for (const en of enemies) {
       const sx = en.x - camX;
       if (sx + en.w < 0 || sx > CW) continue;
-      if (spr.complete && spr.naturalWidth > 0) {
+      const hasSprite = spr.complete && spr.naturalWidth > 0;
+      if (en.dying) {
+        // Tumble off the map: rotate around the enemy's own center as it falls.
+        ctx.save();
+        ctx.translate(sx + en.w / 2, en.y + en.h / 2);
+        ctx.rotate(en.rotation);
+        if (hasSprite) {
+          ctx.drawImage(spr, 0, 0, 28, 28, -en.w / 2, -en.h / 2, en.w, en.h);
+        } else {
+          ctx.fillStyle = "#8b5a2b";
+          ctx.fillRect(-en.w / 2, -en.h / 2, en.w, en.h);
+        }
+        ctx.restore();
+      } else if (hasSprite) {
         ctx.drawImage(spr, en.animFrame * 28, 0, 28, 28, sx, en.y, en.w, en.h);
       } else {
         ctx.fillStyle = "#8b5a2b";
         ctx.fillRect(sx, en.y, en.w, en.h);
       }
-    }
-    for (const s of squashes) {
-      const sx = s.x - camX;
-      ctx.fillStyle = "#6d4c2b";
-      ctx.fillRect(sx, s.y, ENEMY_W, 6);
     }
   }
 
