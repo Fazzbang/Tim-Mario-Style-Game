@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tim's Platformer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#6ec6ff">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="game-wrap">
+    <canvas id="game" width="360" height="640"></canvas>
+
+    <div id="hud">
+      <div id="hud-lives">❤ x3</div>
+      <div id="hud-level">Level 1</div>
+      <div id="hud-score">0</div>
+    </div>
+
+    <div id="overlay" class="show">
+      <div id="overlay-panel">
+        <h1>Tim's Platformer</h1>
+        <p>Run, jump on platforms, stomp enemies from above, and reach the flag to advance!</p>
+        <button id="start-btn">Tap to Start</button>
+      </div>
+    </div>
+
+    <div id="controls">
+      <div id="dpad">
+        <button id="btn-left" class="ctl-btn" aria-label="Left">◀</button>
+        <button id="btn-right" class="ctl-btn" aria-label="Right">▶</button>
+      </div>
+      <button id="btn-jump" class="ctl-btn ctl-jump" aria-label="Jump">JUMP</button>
+    </div>
+  </div>
+
+  <script src="js/levels.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>

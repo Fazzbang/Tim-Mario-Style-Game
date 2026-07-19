@@ -1,0 +1,147 @@
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: #111;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  user-select: none;
+}
+
+#game-wrap {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #111;
+}
+
+/* Portrait-locked stage: keeps a 9:16 aspect ratio and letterboxes on other shapes */
+#game {
+  background: #6ec6ff;
+  width: 100%;
+  height: 100%;
+  max-width: calc(100vh * 9 / 16);
+  max-height: calc(100vw * 16 / 9);
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  display: block;
+  touch-action: none;
+}
+
+#hud {
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top));
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 14px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+  text-shadow: 0 2px 3px rgba(0,0,0,0.5);
+  pointer-events: none;
+}
+
+#controls {
+  position: absolute;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 18px;
+  pointer-events: none;
+}
+
+#dpad {
+  display: flex;
+  gap: 14px;
+  pointer-events: auto;
+}
+
+.ctl-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.28);
+  color: #fff;
+  font-size: 24px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+
+.ctl-btn:active {
+  background: rgba(255,255,255,0.5);
+}
+
+.ctl-jump {
+  width: 84px;
+  height: 84px;
+  font-size: 15px;
+  background: rgba(229,57,53,0.75);
+  pointer-events: auto;
+}
+
+.ctl-jump:active {
+  background: rgba(229,57,53,0.95);
+}
+
+#overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #fff;
+  padding: 24px;
+}
+
+#overlay.show {
+  display: flex;
+}
+
+#overlay-panel h1 {
+  margin: 0 0 8px;
+  font-size: 26px;
+}
+
+#overlay-panel p {
+  margin: 0 0 18px;
+  font-size: 14px;
+  line-height: 1.4;
+  opacity: 0.9;
+}
+
+#overlay-panel button {
+  font-size: 16px;
+  font-weight: 700;
+  padding: 12px 26px;
+  border-radius: 30px;
+  border: none;
+  background: #ffca28;
+  color: #3e2723;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+}
+
+#overlay-panel button:active {
+  background: #ffb300;
+}
