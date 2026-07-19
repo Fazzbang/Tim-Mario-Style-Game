@@ -25,6 +25,10 @@
   // dangling past that toward the bottom - used as a decorative overhang under platforms.
   const TILE_GLOW_FRAC = 0.064;
   const TILE_SOLID_BOTTOM_FRAC = 0.718;
+  // Same on-screen block size for both ground and platforms, so the stonework reads as one
+  // consistent material instead of the ground's blocks looking blown up relative to platforms.
+  const TILE_W = 64;
+  const GROUND_FILL_COLOR = "#1b2033";
 
   // ---------- Physics constants ----------
   const GRAVITY = 0.9;
@@ -33,6 +37,7 @@
   const MAX_FALL = 16;
   const STOMP_BOUNCE = -9;
   const ENEMY_SPEED = 1.0;
+  const MAX_JUMPS = 2; // ground jump + one mid-air double jump
 
   // Player sprite is a single static image (not a spritesheet), matched to its ~2:3 aspect ratio.
   const PLAYER_W = 28;
@@ -42,7 +47,7 @@
   const ENEMY_H = 29;
 
   // ---------- Game state ----------
-  const STATE = { START: "start", PLAYING: "playing", LEVEL_COMPLETE: "level_complete", GAME_OVER: "game_over", WIN: "win" };
+  const STATE = { START: "start", PLAYING: "playing", DYING: "dying", LEVEL_COMPLETE: "level_complete", GAME_OVER: "game_over", WIN: "win" };
   let state = STATE.START;
 
   let levelIndex = 0;
@@ -50,6 +55,8 @@
   let camX = 0;
   let score = 0;
   let lives = 3;
+  let deathTimer = 0;
+  let deathFlash = 0; // 0..1, drawn as a translucent red overlay that fades out after a hit
 
   let player = null;
   let enemies = [];
@@ -61,13 +68,14 @@
     return {
       x: start.x, y: start.y, w: PLAYER_W, h: PLAYER_H,
       vx: 0, vy: 0, onGround: false, facing: 1,
-      animTimer: 0, alive: true,
+      animTimer: 0, alive: true, jumpsUsed: 0,
     };
   }
 
   function loadLevel(idx) {
     level = LEVELS[idx];
     camX = 0;
+    deathFlash = 0;
     player = makePlayer(level.playerStart);
     enemies = level.enemies.map((e) => ({
       x: e.x, y: e.y, w: ENEMY_W, h: ENEMY_H,
@@ -160,8 +168,9 @@
       player.vx = 0;
     }
 
-    if (keys.jump && player.onGround && !jumpHeld) {
+    if (keys.jump && !jumpHeld && player.jumpsUsed < MAX_JUMPS) {
       player.vy = JUMP_VELOCITY;
+      player.jumpsUsed++;
       player.onGround = false;
     }
     jumpHeld = keys.jump;
@@ -190,6 +199,7 @@
           player.y = s.y - player.h;
           player.vy = 0;
           player.onGround = true;
+          player.jumpsUsed = 0;
         } else if (player.vy < 0) {
           player.y = s.y + s.h;
           player.vy = 0;
@@ -204,7 +214,7 @@
 
     // fell in a pit / off the world
     if (player.y > CH + 100) {
-      loseLife();
+      killPlayer(false);
       return;
     }
 
@@ -243,7 +253,7 @@
           score += 100;
           updateHud();
         } else {
-          loseLife();
+          killPlayer(true, en);
           return;
         }
       }
@@ -251,13 +261,41 @@
     enemies = enemies.filter((e) => e.alive);
   }
 
-  function loseLife() {
+  // Death is a brief visible sequence, not an instant reset: the player is knocked back/up,
+  // ignores collision, and falls off the bottom of the screen before the respawn actually happens.
+  function killPlayer(fromEnemy, enemy) {
+    if (state !== STATE.PLAYING) return;
+    player.alive = false;
+    state = STATE.DYING;
+    deathTimer = 0;
+    deathFlash = 1;
+    player.vy = -10;
+    if (fromEnemy && enemy) {
+      player.vx = player.x < enemy.x ? -3 : 3;
+    } else {
+      player.vx = 0;
+    }
+  }
+
+  function updateDeathSequence() {
+    player.vy += GRAVITY;
+    player.x += player.vx;
+    player.y += player.vy;
+    deathTimer++;
+    if (deathFlash > 0) deathFlash = Math.max(0, deathFlash - 0.05);
+    if (player.y > CH + 150 || deathTimer > 90) {
+      finishDeath();
+    }
+  }
+
+  function finishDeath() {
     lives--;
     updateHud();
     if (lives <= 0) {
       state = STATE.GAME_OVER;
     } else {
       loadLevel(levelIndex);
+      state = STATE.PLAYING;
     }
   }
 
@@ -267,6 +305,11 @@
   }
 
   function update() {
+    if (state === STATE.DYING) {
+      updateDeathSequence();
+      updateCamera();
+      return;
+    }
     if (state !== STATE.PLAYING) return;
     updatePlayer();
     if (state !== STATE.PLAYING) return;
@@ -306,19 +349,21 @@
         ctx.fillRect(sx, s.y, s.w, 8);
         continue;
       }
-      // Ground uses just the solid rectangular block portion of the tile (no dangling
-      // moss fringe), scaled to exactly fill the ground strip's height, tiled across its width.
+      // Ground uses the same block scale as platforms (so the stonework looks like one
+      // material) for a single surface row, then a solid fill for the earth beneath it.
       const iw = tile.naturalWidth, ih = tile.naturalHeight;
       const srcY = ih * TILE_GLOW_FRAC;
       const srcH = ih * (TILE_SOLID_BOTTOM_FRAC - TILE_GLOW_FRAC);
-      const scale = s.h / srcH;
-      const tileW = iw * scale;
+      const scale = TILE_W / iw;
+      const rowH = srcH * scale;
       ctx.save();
       ctx.beginPath();
       ctx.rect(sx, s.y, s.w, s.h);
       ctx.clip();
-      for (let x = sx; x < sx + s.w; x += tileW) {
-        ctx.drawImage(tile, 0, srcY, iw, srcH, x, s.y, tileW, s.h);
+      ctx.fillStyle = GROUND_FILL_COLOR;
+      ctx.fillRect(sx, s.y, s.w, s.h);
+      for (let x = sx; x < sx + s.w; x += TILE_W) {
+        ctx.drawImage(tile, 0, srcY, iw, srcH, x, s.y, TILE_W, rowH);
       }
       ctx.restore();
     }
@@ -327,7 +372,6 @@
   function drawPlatforms() {
     const tile = images.platformTile;
     const hasTile = tile.complete && tile.naturalWidth > 0;
-    const TILE_W = 64;
     for (const p of level.platforms) {
       const sx = p.x - camX;
       if (sx + p.w < 0 || sx > CW) continue;
@@ -456,6 +500,17 @@
     drawGoal();
     drawEnemies();
     drawPlayer();
+
+    if (deathFlash > 0) {
+      ctx.fillStyle = `rgba(170, 0, 0, ${deathFlash * 0.5})`;
+      ctx.fillRect(0, 0, CW, CH);
+    }
+    if (state === STATE.DYING) {
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "center";
+      ctx.font = "bold 24px sans-serif";
+      ctx.fillText("You Died", CW / 2, 110);
+    }
 
     if (state === STATE.LEVEL_COMPLETE) {
       drawMessage(["Level Complete!", "Score: " + score], "Tap to continue");
